@@ -1,0 +1,8 @@
+/data/catalog/
+/data/config/
+/data/tasks/
+/data/task-groups.json
+/web/node_modules/
+/web/dist/
+*.log
+/.runtime/

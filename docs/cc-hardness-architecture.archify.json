@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "cc-hardness 多智能体研发编排架构",
+    "locale": "zh-CN",
+    "output": "cc-hardness-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1310, 720]
+  },
+  "components": [
+    {
+      "id": "userBrowser",
+      "type": "external",
+      "label": "用户浏览器",
+      "sublabel": "规划、对话、审批、验收",
+      "pos": [30, 300],
+      "size": [140, 72]
+    },
+    {
+      "id": "reactConsole",
+      "type": "frontend",
+      "label": "React 控制台",
+      "sublabel": "任务工作区 + DAG + 会话",
+      "tag": "React 19 / TypeScript",
+      "pos": [215, 300],
+      "size": [160, 72]
+    },
+    {
+      "id": "goApi",
+      "type": "backend",
+      "label": "Go API 控制面",
+      "sublabel": "REST、静态资源、请求边界",
+      "tag": "net/http",
+      "pos": [420, 300],
+      "size": [160, 72]
+    },
+    {
+      "id": "taskOrchestrator",
+      "type": "backend",
+      "label": "任务与 DAG 服务",
+      "sublabel": "计划校验、状态机、依赖解锁",
+      "tag": "模块化单体",
+      "pos": [640, 300],
+      "size": [175, 72]
+    },
+    {
+      "id": "runtimeManager",
+      "type": "backend",
+      "label": "运行时管理器",
+      "sublabel": "会话复用、进程与事件游标",
+      "tag": "goroutine + os/exec",
+      "pos": [865, 300],
+      "size": [170, 72]
+    },
+    {
+      "id": "claudeSessions",
+      "type": "external",
+      "label": "Claude Code 会话池",
+      "sublabel": "每个任务成员一个持久子进程",
+      "tag": "stream-json NDJSON",
+      "pos": [1085, 300],
+      "size": [180, 72]
+    },
+    {
+      "id": "catalogStore",
+      "type": "database",
+      "label": "全局资产与配置",
+      "sublabel": "Agent / Skill / Rule / KB / ConfigSet",
+      "tag": "data/catalog + data/config",
+      "pos": [625, 90],
+      "size": [205, 76]
+    },
+    {
+      "id": "taskState",
+      "type": "database",
+      "label": "任务编排状态区",
+      "sublabel": "plan / runtime / events / logs",
+      "tag": ".cc-hardness + JSON(L)",
+      "pos": [625, 515],
+      "size": [205, 76]
+    },
+    {
+      "id": "projectWorkspace",
+      "type": "cloud",
+      "label": "项目产物区",
+      "sublabel": "源码、技术文档、测试与交付物",
+      "tag": "共享读写工作区",
+      "pos": [1070, 515],
+      "size": [205, 76]
+    },
+    {
+      "id": "externalTools",
+      "type": "external",
+      "label": "外部研发工具",
+      "sublabel": "Stitch、MCP、浏览器、Git、构建工具",
+      "pos": [1070, 90],
+      "size": [190, 76]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "cc-hardness 控制面",
+      "wraps": ["goApi", "taskOrchestrator", "runtimeManager"],
+      "pad": 30
+    },
+    {
+      "kind": "region",
+      "label": "data/tasks/{task-id} 同一物理任务目录",
+      "wraps": ["taskState", "projectWorkspace"],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "browserToReact",
+      "from": "userBrowser",
+      "to": "reactConsole",
+      "label": "桌面端交互",
+      "variant": "emphasis",
+      "labelDy": -28
+    },
+    {
+      "id": "reactToApi",
+      "from": "reactConsole",
+      "to": "goApi",
+      "label": "REST + 增量轮询",
+      "variant": "emphasis",
+      "labelDy": 60
+    },
+    {
+      "id": "apiToTask",
+      "from": "goApi",
+      "to": "taskOrchestrator",
+      "label": "查询与命令",
+      "variant": "emphasis"
+    },
+    {
+      "id": "taskToRuntime",
+      "from": "taskOrchestrator",
+      "to": "runtimeManager",
+      "label": "分派 READY 节点",
+      "variant": "emphasis",
+      "labelDy": -28
+    },
+    {
+      "id": "runtimeToClaude",
+      "from": "runtimeManager",
+      "to": "claudeSessions",
+      "label": "NDJSON 指令 ↔ 结果事件",
+      "variant": "emphasis",
+      "labelDy": -45
+    },
+    {
+      "id": "catalogToTask",
+      "from": "catalogStore",
+      "to": "taskOrchestrator",
+      "label": "解析并冻结资产版本",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "taskToState",
+      "from": "taskOrchestrator",
+      "to": "taskState",
+      "label": "原子状态 + 运行快照",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "runtimeToState",
+      "from": "runtimeManager",
+      "to": "taskState",
+      "label": "会话游标与协议日志",
+      "fromSide": "bottom",
+      "toSide": "right",
+      "labelDy": 24
+    },
+    {
+      "id": "claudeToWorkspace",
+      "from": "claudeSessions",
+      "to": "projectWorkspace",
+      "label": "同目录读写源码与文档",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDx": 72
+    },
+    {
+      "id": "claudeToTools",
+      "from": "claudeSessions",
+      "to": "externalTools",
+      "label": "Skill / MCP / CLI 调用",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelDx": 72
+    },
+    {
+      "id": "stateToWorkspace",
+      "from": "taskState",
+      "to": "projectWorkspace",
+      "label": "状态驱动、产物回写"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "核心定位",
+      "items": [
+        "模块化单体控制面管理多个 Claude Code 子进程",
+        "任务目录既是状态容器，也是所有成员共享的真实项目工作区"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "调度关键",
+      "items": [
+        "DAG 只在依赖完成后把节点从 PENDING 解锁为 READY",
+        "人工门禁冻结 PRD、架构、原型和最终交付，后台节点只能做可回退准备"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "恢复与追溯",
+      "items": [
+        "当前状态使用原子 JSON，高频历史使用追加式 JSONL/NDJSON",
+        "浏览器按序号增量轮询；后端重启后可从任务日志恢复会话历史"
+      ]
+    }
+  ]
+}
